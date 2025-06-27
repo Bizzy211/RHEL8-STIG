@@ -1,17 +1,17 @@
 ---
 ## metadata for Audit benchmark
-benchmark_version: 'v2r1'
+benchmark_version: 'v2r2'
 
-## Benchmark name used by audting control role
+## Benchmark name used by auditing control role
 # The audit variable found at the base
 benchmark: RHEL8-STIG
 
 # Whether to skip the OS check for supported OS's
 skip_os_check: false
 
-rhel8stig_cat1_patch: true
-rhel8stig_cat2_patch: true
-rhel8stig_cat3_patch: true
+rhel8stig_cat1: true
+rhel8stig_cat2: true
+rhel8stig_cat3: true
 
 # We've defined complexity-high to mean that we cannot automatically remediate
 # the rule in question.  In the future this might mean that the remediation
@@ -55,6 +55,10 @@ rhel8stig_skip_reboot: true
 # Defined will change if control requires
 change_requires_reboot: false
 
+# Create managed not custom local_facts files
+create_benchmark_facts: true
+ansible_facts_path: /etc/ansible/facts.d
+
 ###########################################
 ### Goss is required on the remote host ###
 ### vars/auditd.yml for other settings  ###
@@ -69,16 +73,12 @@ audit_run_heavy_tests: true
 
 ## Only run Audit do not remediate
 audit_only: false
-### As part of audit_only ###
-# This will enable files to be copied back to control node in audit_only mode
-fetch_audit_files: false
-# Path to copy the files to will create dir structure in audit_only mode
-audit_capture_files_dir: /some/location to copy to on control node
+
 #############################
 
 # How to retrieve audit binary
 # Options are copy or download - detailed settings at the bottom of this file
-# you will need to access to either github or the file already dowmloaded
+# you will need to access to either github or the file already downloaded
 get_audit_binary_method: download
 
 ## if get_audit_binary_method - copy the following needs to be updated for your environment
@@ -93,7 +93,7 @@ audit_content: git
 # If using either archive, copy, get_url:
 ## Note will work with .tar files - zip will require extra configuration
 ### If using get_url this is expecting github url in tar.gz format e.g.
-### https://github.com/ansible-lockdown/UBUNTU22-CIS-Audit/archive/refs/heads/benchmark-v1.0.0.tar.gz
+### https://github.com/ansible-lockdown/RHEL8-STIG-Audit/archive/refs/tags/1.0.0.tar.gz
 audit_conf_source: "some path or url to copy from"
 
 # Destination for the audit content to be placed on managed node
@@ -102,6 +102,20 @@ audit_conf_dest: "/opt"
 
 # Where the audit logs are stored
 audit_log_dir: '/opt'
+
+## Ability to collect and take audit files moving to a centralized location
+# This enables the collection of the files from the host
+fetch_audit_output: false
+
+# Method of getting,uploading the summary files
+## Ensure access and permissions are available for these to occur.
+## options are
+# fetch - fetches from server and moves to location on the ansible controller (could be a mount point available to controller)
+# copy - copies file to a location available to the managed node
+audit_output_collection_method: fetch
+
+# Location to put the audit files
+audit_output_destination: /opt/audit_summaries/
 
 ### Goss Settings ##
 ####### END ########
@@ -112,6 +126,7 @@ audit_log_dir: '/opt'
 # CAT 1 rules
 rhel_08_010000: true
 rhel_08_010020: true
+rhel_08_010030: true
 rhel_08_010121: true
 rhel_08_010140: true
 rhel_08_010150: true
@@ -136,7 +151,6 @@ rhel_08_040360: true
 # CAT 2 rules
 rhel_08_010010: true
 rhel_08_010019: true
-rhel_08_010030: true
 rhel_08_010040: true
 rhel_08_010049: true
 rhel_08_010050: true
@@ -560,7 +574,7 @@ rhel8stig_sudoers_exclude_nopasswd_list:
 rhel8stig_ssh_pub_key_perm: 0644
 
 # RHEL-08-010490
-# rhel8stig_ssh_priv_key_perm are the permssions set to the SSH private host keys
+# rhel8stig_ssh_priv_key_perm are the permissions set to the SSH private host keys
 # To conform to STIG standards this needs to be set to 0600 or less permissive
 rhel8stig_ssh_priv_key_perm: 0600
 
@@ -590,7 +604,7 @@ rhel8stig_local_int_home_file_perms: 0750
 
 # RHEL-08-010770
 # rhel8stig_local_int_perm is the permissions set to the local initialization files
-# To connform to STIG standards this needs to be set to 0740 or less permissive
+# To conform to STIG standards this needs to be set to 0740 or less permissive
 rhel8stig_local_int_perm: 0740
 
 # RHEL-08-020100 pamd file permissions - /etc/pam.d/(password-auth|system-auth) files
@@ -827,7 +841,7 @@ rhel8stig_availability_override: false
 #      Use this for any other setup to avoid loss of data or data corruption.
 rhel8stig_auditd_failure_flag: "{{ rhel8stig_availability_override | ternary(1, 2) }}"
 
-# REHL-08-010020
+# RHEL-08-010020
 rhel8stig_boot_part: "{{ rhel_08_boot_part.stdout }}"
 
 # RHEL-08-010740/RHEL-08-010750
@@ -851,8 +865,8 @@ rhel8stig_dns_servers:  # The order needs to be set as expected. If you have 3 y
 rhel8stig_int_gid: 1000
 
 # RHEL-08-010130
-# The rounds parameter goes into the SHA_CRYPT_MIN_ROUNDS element of the /etc/login.defs file. The value shoudl be set no lower than 5000
-rhel8stig_hashing_rounds: 5000
+# The rounds parameter goes into the SHA_CRYPT_MIN_ROUNDS element of the /etc/login.defs file. The value shoudl be set no lower than 100000
+rhel8stig_hashing_rounds: 100000
 
 # RHEL-08-010100
 rhel8stig_path_to_sshkey: "/root/.ssh/"
@@ -898,10 +912,10 @@ rhel8stig_white_list_services:
 # This will be the MACs setting. It is a string that will be the entirety of the MAC's setting in the openssh.config file
 # to conform to STIG standard control RHEL-08-010290 this variable must include hmac-sha2-512,hmac-sha2-256
 # to conform to STIG standard control RHEL-08-010291 this variable must include aes256-ctr,aes192-ctr,aes128-ctr
-rhel8stig_ssh_macs: 'MACS=hmac-sha2-512,hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com'
-rhel8stig_ssh_ciphers: "Ciphers=aes256-ctr,aes192-ctr,aes128-ctr,aes256-gcm@openssh.com,aes128-gcm@openssh.com"
+rhel8stig_ssh_macs: 'MACS=hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256'
+rhel8stig_ssh_ciphers: "Ciphers=aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes128-ctr"
 # RHEL-08-040342
-# Expected Values for FIPS KEX algorithims
+# Expected Values for FIPS KEX algorithms
 rhel8stig_ssh_kex: "KexAlgorithms=ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512"
 
 # RHEL-08-010295
